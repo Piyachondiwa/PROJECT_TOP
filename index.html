@@ -16,13 +16,20 @@
         <div class="stat-row"><span>MP</span><div class="bar"><div id="mp-fill" class="fill mp"></div></div><span id="mp-text">50 / 50</span></div>
         <div class="stat-line"><span>LV <b id="level">1</b></span><span>XP <b id="xp">0 / 100</b></span><span>Gold <b id="gold">100</b></span></div>
         <div class="stat-line"><span>Seeds <b id="seeds">0</b></span><span>Time <b id="time">08:00</b></span></div>
+        <div class="stat-line"><span>Foods <b id="foods">0</b></span><span>Power <b id="power">0</b></span></div>
       </div>
-      <div class="hud-box controls">WASD / Arrow Keys: Move &nbsp; | &nbsp; Space: Dodge &nbsp; | &nbsp; J/Z: Attack &nbsp; | &nbsp; K/X: Skill &nbsp; | &nbsp; E: Garden</div>
+      <div class="hud-box controls">WASD / Arrows: Move | Space: Dodge | J/Z: Attack | K/X: Skill | E: Garden | I: Inventory | 1-3: Skill | Q: Eat</div>
     </section>
     <div id="message"></div>
+    <section id="inventory" class="panel hidden" aria-label="Inventory">
+      <div class="panel-title">INVENTORY</div>
+      <div id="inventory-content"></div>
+      <div class="panel-help">I: Close | 1-3: Select Skill | Q: Eat selected food</div>
+    </section>
   </main>
   <script src="data.js"></script>
   <script src="garden.js"></script>
+  <script src="inventory.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
