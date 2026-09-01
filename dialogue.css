@@ -1,0 +1,6 @@
+#dialogue { position:absolute; left:50%; right:50%; bottom:72px; transform:translateX(-50%); width:min(760px,90%); padding:14px 16px; background:rgba(12,15,18,.94); border:2px solid #69706d; box-shadow:6px 6px 0 rgba(0,0,0,.35); pointer-events:none; z-index:5; }
+#dialogue.hidden { display:none; }
+.dialogue-name { font-size:15px; margin-bottom:8px; color:#ddd6bf; }
+.dialogue-name span { margin-left:8px; opacity:.6; font-size:11px; }
+.dialogue-text { min-height:42px; line-height:1.5; font-size:13px; }
+.dialogue-help { margin-top:10px; font-size:10px; opacity:.55; text-align:right; }
