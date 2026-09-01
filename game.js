@@ -4,6 +4,11 @@ ctx.imageSmoothingEnabled = false;
 
 const WORLD = { width: 2400, height: 1600 };
 const keys = new Set();
+const elementColors = Object.freeze({
+  fire: '#d85c45', water: '#4e8fd5', lightning: '#e2c85b', earth: '#a17a4f',
+  nature: '#65a85d', ice: '#82c7d9', shadow: '#765b9b', light: '#f0d987', arcane: '#a27bd1'
+});
+
 const player = {
   x: 480, y: 360, w: 34, h: 46, speed: 170,
   hp: 100, maxHp: 100, mp: 50, maxMp: 50, xp: 0, xpToNext: 100, level: 1, gold: 100,
@@ -69,7 +74,55 @@ function dodge(){if(player.dodgeCooldown>0||player.dodgeTimer>0||isOverlayOpen()
 function update(dt){worldTime=(worldTime+dt/70)%24;player.attackTimer=Math.max(0,player.attackTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dodgeCooldown=Math.max(0,player.dodgeCooldown-dt);player.skillCooldown=Math.max(0,player.skillCooldown-dt);if(messageTimer>0){messageTimer-=dt;if(messageTimer<=0){const el=document.getElementById('message');if(el)el.classList.remove('show');}}let dx=0,dy=0;if(keys.has('KeyA')||keys.has('ArrowLeft'))dx--;if(keys.has('KeyD')||keys.has('ArrowRight'))dx++;if(keys.has('KeyW')||keys.has('ArrowUp'))dy--;if(keys.has('KeyS')||keys.has('ArrowDown'))dy++;const moving=dx!==0||dy!==0;if(moving&&!isOverlayOpen()){const len=Math.hypot(dx,dy)||1;player.x+=(dx/len)*player.speed*dt;player.y+=(dy/len)*player.speed*dt;if(Math.abs(dx)>Math.abs(dy))player.facing=dx>0?'right':'left';else player.facing=dy>0?'down':'up';clampPlayer();}for(const m of monsters){if(!m.alive)continue;m.attackCooldown=Math.max(0,m.attackCooldown-dt);m.hitFlash=Math.max(0,m.hitFlash-dt);const dxm=player.x-m.x,dym=player.y-m.y,d=Math.hypot(dxm,dym);if(d<260&&d>44){m.x+=(dxm/d)*m.speed*dt;m.y+=(dym/d)*m.speed*dt;}else if(d<=44&&m.attackCooldown<=0&&!player.dodgeTimer&&!isOverlayOpen()){player.hp=Math.max(0,player.hp-Math.max(1,Math.round(m.baseDamage||8)));m.attackCooldown=1.2;if(player.hp<=0){player.hp=player.maxHp;player.x=player.lastSafeX;player.y=player.lastSafeY;showMessage('You were defeated. Returned to safety.');}}}for(const p of particles){p.life-=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;}for(let i=particles.length-1;i>=0;i--)if(particles[i].life<=0)particles.splice(i,1);camera.x=Math.max(0,Math.min(WORLD.width-canvas.width,player.x-canvas.width/2));camera.y=Math.max(0,Math.min(WORLD.height-canvas.height,player.y-canvas.height/2));if(typeof updateHud==='function')updateHud();}
 function clampPlayer(){player.x=Math.max(20,Math.min(WORLD.width-20,player.x));player.y=Math.max(20,Math.min(WORLD.height-20,player.y));}
 function burst(x,y,color,count){for(let i=0;i<count;i++){const a=Math.random()*Math.PI*2,s=20+Math.random()*70;particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.4+Math.random()*.5,color});}}
-function drawWorld(){ctx.fillStyle='#1b2725';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.save();ctx.translate(-camera.x,-camera.y);ctx.fillStyle='#263b31';ctx.fillRect(0,0,WORLD.width,WORLD.height);ctx.strokeStyle='#365545';ctx.lineWidth=2;for(let x=0;x<=WORLD.width;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,WORLD.height);ctx.stroke();}for(let y=0;y<=WORLD.height;y+=80){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(WORLD.width,y);ctx.stroke();}ctx.fillStyle='#5a4a32';ctx.fillRect(320,220,340,270);ctx.fillStyle='#6d7b5b';ctx.fillRect(350,250,280,190);ctx.fillStyle='#c78f6e';ctx.fillRect(488,298,24,32);ctx.fillStyle='#8094ad';ctx.fillRect(558,308,24,32);ctx.fillStyle='#8f7ba5';ctx.fillRect(418,308,24,32);for(const m of monsters){if(!m.alive)continue;ctx.fillStyle=m.hitFlash>0?'#fff':(elementColors[m.element]||'#d66');ctx.fillRect(m.x-18,m.y-18,36,36);ctx.fillStyle='#111';ctx.fillRect(m.x-10,m.y-5,5,5);ctx.fillRect(m.x+5,m.y-5,5,5);ctx.fillStyle='#111';ctx.fillRect(m.x-20,m.y-30,40,5);ctx.fillStyle='#67b56a';ctx.fillRect(m.x-20,m.y-30,40*(m.hp/m.maxHp),5);}ctx.fillStyle=player.dodgeTimer>0?'#fff':'#e8e0c8';ctx.fillRect(player.x-player.w/2,player.y-player.h/2,player.w,player.h);ctx.fillStyle='#111';ctx.fillRect(player.x-9,player.y-10,6,6);ctx.fillRect(player.x+3,player.y-10,6,6);for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/.8);ctx.fillStyle=p.color;ctx.fillRect(p.x-2,p.y-2,4,4);}ctx.globalAlpha=1;ctx.restore();}
+
+function pixelRect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));}
+function drawPixelPlayer(){
+  const x=Math.round(player.x), y=Math.round(player.y);
+  const walk=((performance.now()/110)|0)%2;
+  ctx.fillStyle=player.dodgeTimer>0?'#fff':'#eadfc9';
+  pixelRect(x-10,y-16,20,20,ctx.fillStyle);
+  pixelRect(x-14,y-5,28,18,ctx.fillStyle);
+  pixelRect(x-12,y+13,8,7,walk?'#b8a98d':'#9d9079');
+  pixelRect(x+4,y+13,8,7,walk?'#9d9079':'#b8a98d');
+  pixelRect(x-7,y-10,4,4,'#171717'); pixelRect(x+3,y-10,4,4,'#171717');
+  const dir=getFacingVector();
+  pixelRect(x+dir.x*14-2,y+dir.y*14-2,5,5,'#d9bd72');
+}
+function drawPixelMonster(m){
+  const x=Math.round(m.x), y=Math.round(m.y), c=m.hitFlash>0?'#fff':(elementColors[m.element]||'#d66');
+  pixelRect(x-15,y-13,30,26,c);
+  pixelRect(x-11,y-18,22,6,c);
+  pixelRect(x-17,y-8,5,12,c); pixelRect(x+12,y-8,5,12,c);
+  pixelRect(x-9,y-5,5,5,'#171717'); pixelRect(x+4,y-5,5,5,'#171717');
+  pixelRect(x-13,y-24,26,4,'#171717');
+  pixelRect(x-13,y-24,26*Math.max(0,m.hp/m.maxHp),4,'#69bd6b');
+}
+function drawWorld(){
+  ctx.fillStyle='#101b19'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.save(); ctx.translate(-Math.floor(camera.x),-Math.floor(camera.y));
+  ctx.fillStyle='#1f382d'; ctx.fillRect(0,0,WORLD.width,WORLD.height);
+  // Pixel-art tile pattern instead of a plain debug grid.
+  for(let y=0;y<WORLD.height;y+=32){
+    for(let x=0;x<WORLD.width;x+=32){
+      const n=((x/32)*13+(y/32)*7)%5;
+      if(n===0) pixelRect(x+5,y+7,3,3,'#294738');
+      if(n===1) pixelRect(x+21,y+19,2,2,'#173025');
+      if(n===2) pixelRect(x+11,y+25,4,2,'#294738');
+    }
+  }
+  // Town courtyard.
+  pixelRect(320,220,340,270,'#5b4a32');
+  pixelRect(336,236,308,238,'#7b8865');
+  pixelRect(350,250,280,190,'#707f5d');
+  // Simple pixel houses/NPC stalls.
+  pixelRect(405,285,52,45,'#9b684e'); pixelRect(399,276,64,12,'#493a2a');
+  pixelRect(485,275,52,55,'#8b7654'); pixelRect(479,266,64,12,'#4a3c2c');
+  pixelRect(555,285,52,45,'#6d6686'); pixelRect(549,276,64,12,'#40364e');
+  for(const m of monsters){if(m.alive)drawPixelMonster(m);}
+  drawPixelPlayer();
+  for(const p of particles){ctx.globalAlpha=Math.max(0,p.life/.8);pixelRect(p.x-2,p.y-2,4,4,p.color);}
+  ctx.globalAlpha=1; ctx.restore();
+}
 function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);drawWorld();}
 function gameLoop(now){const dt=Math.min(.05,(now-lastTime)/1000);lastTime=now;update(dt);draw();requestAnimationFrame(gameLoop);}
 if(typeof updateHud==='function')updateHud();
