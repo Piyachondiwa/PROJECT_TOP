@@ -6,10 +6,8 @@ function getSafeNumber(value, fallback) {
 }
 
 function migrateSave(save) {
-  if (!save || typeof save !== 'object') return null;
+  if (!save || typeof save !== 'object' || Array.isArray(save)) return null;
   if (save.version === SAVE_VERSION) return save;
-  if (save.version === 1) {
-    return { ...save, version: SAVE_VERSION, migratedAt: Date.now() };
-  }
+  if (save.version === 1) return { ...save, version: SAVE_VERSION, migratedAt: Date.now() };
   return null;
 }
