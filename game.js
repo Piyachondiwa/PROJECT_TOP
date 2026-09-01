@@ -20,9 +20,7 @@ const player = {
   attackTimer: 0,
   dodgeTimer: 0,
   dodgeCooldown: 0,
-  contactDamageCooldown: 0,
   skillCooldown: 0,
-  skillId: 'ember-burst',
   lastSafeX: 480,
   lastSafeY: 360,
 };
@@ -50,34 +48,6 @@ let worldTime = 8.0;
 let lastTime = performance.now();
 let messageTimer = 0;
 
-window.addEventListener('keydown', (e) => {
-  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-  if (e.repeat) {
-    keys.add(e.code);
-    return;
-  }
-  keys.add(e.code);
-  if (e.code === 'KeyJ' || e.code === 'KeyZ') attack();
-  if (e.code === 'Space') dodge();
-  if (e.code === 'KeyK' || e.code === 'KeyX') useMonsterSkill();
-  if (e.code === 'KeyE') interactWithGarden();
-  if (e.code === 'KeyI') toggleInventory();
-  if (e.code === 'KeyQ') eatSelectedFood();
-  if (e.code === 'Digit1') selectSkill(0);
-  if (e.code === 'Digit2') selectSkill(1);
-  if (e.code === 'Digit3') selectSkill(2);
-  if (e.code === 'F5') {
-    e.preventDefault();
-    saveGame(true);
-  }
-  if (e.code === 'F9') {
-    e.preventDefault();
-    loadGame(true);
-  }
-});
-window.addEventListener('keyup', (e) => keys.delete(e.code));
-window.addEventListener('blur', () => keys.clear());
-
 function showMessage(text) {
   const el = document.getElementById('message');
   el.textContent = text;
@@ -102,7 +72,9 @@ function isInAttackArc(monster, range, arcCos = 0.15) {
 }
 
 function getAvailableSkills() {
-  const unlocked = player.unlockedSkillIds || new Set(['ember-burst']);
+  const unlocked = player.unlockedSkillIds instanceof Set
+    ? player.unlockedSkillIds
+    : new Set(['ember-burst']);
   const skills = [];
   for (const monster of Object.values(MONSTER_DATA)) {
     if (monster.skill && unlocked.has(monster.skill.id)) skills.push(monster.skill);
@@ -115,7 +87,12 @@ function selectSkill(index) {
   if (!skills[index]) return;
   player.skillId = skills[index].id;
   showMessage(`Skill: ${skills[index].name}`);
-  if (typeof renderInventory === 'function') renderInventory();
+  if (typeof window.renderInventory === 'function') window.renderInventory();
+}
+
+function getPlayerAttackPower() {
+  const effects = typeof getTraitEffects === 'function' ? getTraitEffects() : {};
+  return 18 + player.level * 2 + (effects.attackPower || 0);
 }
 
 function attack() {
@@ -126,7 +103,7 @@ function attack() {
   for (const monster of monsters) {
     if (!monster.alive || !isInAttackArc(monster, 68)) continue;
     const multiplier = getElementMultiplier(ELEMENTS.ARCANE, monster.element);
-    const damage = Math.max(1, Math.round((18 + player.level * 2) * multiplier));
+    const damage = Math.max(1, Math.round(getPlayerAttackPower() * multiplier));
     monster.hp = Math.max(0, monster.hp - damage);
     monster.hitFlash = 0.12;
     burst(monster.x, monster.y, '#ded6b7', 7);
@@ -158,7 +135,7 @@ function useMonsterSkill() {
   }
 
   let hit = false;
-  const element = skillElement(skill);
+  const element = skill.element || skillElement(skill);
   for (const monster of monsters) {
     if (!monster.alive || !isInAttackArc(monster, range, 0)) continue;
     const multiplier = getElementMultiplier(element, monster.element);
@@ -173,10 +150,7 @@ function useMonsterSkill() {
 }
 
 function skillElement(skill) {
-  if (skill.id === 'ember-burst') return ELEMENTS.FIRE;
-  if (skill.id === 'goblin-rush') return ELEMENTS.NATURE;
-  if (skill.id === 'predator-dash') return ELEMENTS.NATURE;
-  return ELEMENTS.ARCANE;
+  return skill.element || ELEMENTS.ARCANE;
 }
 
 function addSeed(monster) {
@@ -186,12 +160,13 @@ function addSeed(monster) {
 function killMonster(monster) {
   if (!monster.alive) return;
   monster.alive = false;
-  player.gold += 15 + monster.level * 5;
-  addSeed(monster);
+  const drops = typeof getMaterialDropAmount === 'function' ? getMaterialDropAmount(1) : 1;
+  player.gold += (15 + monster.level * 5) * drops;
+  for (let i = 0; i < drops; i += 1) addSeed(monster);
   player.xp += 25 + monster.level * 10;
   player.mp = Math.min(player.maxMp, player.mp + 5);
   burst(monster.x, monster.y, elementColors[monster.element] || '#aaa', 18);
-  showMessage(`${monster.name} fell → ${monster.seedName} • +XP`);
+  showMessage(`${monster.name} fell → ${monster.seedName} ×${drops} • +XP`);
   checkLevelUp();
   window.setTimeout(() => respawnMonster(monster), 4500);
 }
@@ -243,7 +218,6 @@ function update(dt) {
   player.attackTimer = Math.max(0, player.attackTimer - dt);
   player.dodgeTimer = Math.max(0, player.dodgeTimer - dt);
   player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
-  player.contactDamageCooldown = Math.max(0, player.contactDamageCooldown - dt);
   player.skillCooldown = Math.max(0, player.skillCooldown - dt);
 
   if (messageTimer > 0) {
@@ -260,14 +234,15 @@ function update(dt) {
   const moving = dx !== 0 || dy !== 0;
   if (moving && player.dodgeTimer <= 0 && !inventoryState.open) {
     const len = Math.hypot(dx, dy) || 1;
-    player.x += (dx / len) * player.speed * dt;
-    player.y += (dy / len) * player.speed * dt;
+    const speed = typeof getPlayerMoveSpeed === 'function' ? getPlayerMoveSpeed() : player.speed;
+    player.x += (dx / len) * speed * dt;
+    player.y += (dy / len) * speed * dt;
     if (Math.abs(dx) > Math.abs(dy)) player.facing = dx > 0 ? 'right' : 'left';
     else player.facing = dy > 0 ? 'down' : 'up';
   }
   clampPlayer();
 
-  updateGarden();
+  if (typeof updateGarden === 'function') updateGarden();
   for (const monster of monsters) updateMonster(monster, dt);
   updateParticles(dt);
 
@@ -290,8 +265,12 @@ function updateMonster(m, dt) {
   }
 
   if (!inventoryState.open && dist < 42 && player.dodgeTimer <= 0 && m.attackCooldown <= 0) {
+    const rawDamage = 6 + m.level;
+    const damage = typeof applyIncomingElementDamage === 'function'
+      ? applyIncomingElementDamage(rawDamage, m.element)
+      : rawDamage;
     const before = player.hp;
-    player.hp = Math.max(0, player.hp - (6 + m.level));
+    player.hp = Math.max(0, player.hp - damage);
     m.attackCooldown = 0.65;
     if (player.hp < before) burst(player.x, player.y, '#a86464', 4);
     if (player.hp <= 0) collapsePlayer();
@@ -303,7 +282,6 @@ function collapsePlayer() {
   player.mp = player.maxMp;
   player.x = player.lastSafeX;
   player.y = player.lastSafeY;
-  player.contactDamageCooldown = 1;
   player.skillCooldown = 0.5;
   showMessage('You collapsed and woke up at the last safe place.');
 }
@@ -339,11 +317,11 @@ function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawWorld();
   drawPlants();
-  drawGardenPlants();
+  if (typeof drawGardenPlants === 'function') drawGardenPlants();
   for (const m of monsters) if (m.alive) drawMonster(m);
   drawPlayer();
   for (const p of particles) drawParticle(p);
-  drawGardenHint();
+  if (typeof drawGardenHint === 'function') drawGardenHint();
   drawNightOverlay();
 }
 
@@ -375,14 +353,10 @@ function drawPlants() {
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
   for (const plot of GARDEN_PLOTS) {
-    ctx.fillStyle = '#604f3b';
-    ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
-    ctx.fillStyle = '#776047';
-    ctx.fillRect(plot.x + 4, plot.y + 5, plot.w - 8, plot.h - 10);
+    ctx.fillStyle = '#604f3b'; ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
+    ctx.fillStyle = '#776047'; ctx.fillRect(plot.x + 4, plot.y + 5, plot.w - 8, plot.h - 10);
   }
-  ctx.fillStyle = '#d0c3a1';
-  ctx.font = '14px monospace';
-  ctx.fillText('MONSTER GARDEN', 690, 760);
+  ctx.fillStyle = '#d0c3a1'; ctx.font = '14px monospace'; ctx.fillText('MONSTER GARDEN', 690, 760);
   ctx.restore();
 }
 
@@ -417,7 +391,7 @@ function drawMonster(m) {
   if (m.id === 'slime') {
     ctx.beginPath(); ctx.arc(0, 0, 18, Math.PI, 0); ctx.lineTo(18, 13); ctx.lineTo(-18, 13); ctx.closePath(); ctx.fill();
   } else if (m.id === 'wolf') {
-    ctx.beginPath(); ctx.moveTo(-23, 10); ctx.lineTo(-8, -10); ctx.lineTo(10, -12); ctx.lineTo(24, 4); ctx.lineTo(12, 14); ctx.lineTo(-15, 14); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-23,10); ctx.lineTo(-8,-10); ctx.lineTo(10,-12); ctx.lineTo(24,4); ctx.lineTo(12,14); ctx.lineTo(-15,14); ctx.closePath(); ctx.fill();
   } else {
     ctx.fillRect(-15, -17, 30, 34); ctx.fillRect(-19, -21, 8, 8); ctx.fillRect(11, -21, 8, 8);
   }
@@ -442,23 +416,9 @@ function drawParticle(p) {
   ctx.restore();
 }
 
-function drawGardenHint() {
-  const hint = getGardenHint();
-  if (!hint) return;
-  const plot = getNearbyPlot();
-  if (!plot) return;
-  ctx.save();
-  ctx.translate(-camera.x, -camera.y);
-  ctx.fillStyle = '#eee4c9';
-  ctx.font = '12px monospace';
-  ctx.textAlign = 'center';
-  ctx.fillText(hint, plot.x + plot.w / 2, plot.y - 10);
-  ctx.restore();
-}
-
 function drawNightOverlay() {
-  const night = worldTime >= 19 || worldTime < 6;
-  if (!night) return;
+  if (typeof isNightTime === 'function' && !isNightTime()) return;
+  if (typeof isNightTime !== 'function' && !(worldTime >= 19 || worldTime < 6)) return;
   const darkness = worldTime >= 21 || worldTime < 4 ? 0.42 : 0.24;
   ctx.fillStyle = `rgba(10, 15, 28, ${darkness})`;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -473,16 +433,10 @@ function updateHud() {
   document.getElementById('level').textContent = player.level;
   document.getElementById('xp').textContent = `${player.xp} / ${player.xpToNext}`;
   document.getElementById('gold').textContent = player.gold;
-  document.getElementById('seeds').textContent = Object.values(player.seeds).reduce((sum, count) => sum + Math.max(0, count || 0), 0);
+  document.getElementById('seeds').textContent = Object.values(player.seeds).reduce((sum, count) => sum + count, 0);
   document.getElementById('time').textContent = formatWorldTime(worldTime);
   document.getElementById('foods').textContent = getTotalFoodCount();
   document.getElementById('power').textContent = Object.keys(player.activeTraits || {}).length;
-}
-
-function formatWorldTime(time) {
-  const hours = Math.floor(time) % 24;
-  const minutes = Math.floor((time - Math.floor(time)) * 60);
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function loop(now) {
@@ -494,10 +448,7 @@ function loop(now) {
 }
 
 if (!player.foods) player.foods = {};
-if (!player.activeTraits) player.activeTraits = {};
-if (!(player.unlockedSkillIds instanceof Set)) player.unlockedSkillIds = new Set(['ember-burst']);
-if (typeof renderInventory === 'function') renderInventory();
-loadGame(false);
+if (typeof loadGame === 'function') loadGame(false);
+if (typeof updateHud === 'function') updateHud();
 showMessage('Explore the wilds. The garden is waiting.');
-updateHud();
 requestAnimationFrame(loop);
