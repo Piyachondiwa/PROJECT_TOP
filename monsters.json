@@ -1,0 +1,7 @@
+{
+  "goblin": {"id":"goblin","name":"Goblin","level":2,"element":"nature","hp":45,"trait":"Scavenger","skill":"goblin-rush"},
+  "slime": {"id":"slime","name":"Fire Slime","level":3,"element":"fire","hp":55,"trait":"Ember Skin","skill":"ember-burst"},
+  "wolf": {"id":"wolf","name":"Wolf","level":4,"element":"nature","hp":65,"trait":"Predator","skill":"predator-dash"},
+  "bat": {"id":"bat","name":"Dusk Bat","level":5,"element":"shadow","hp":72,"trait":"Night Sight","skill":"shadow-bite"},
+  "mushroom": {"id":"mushroom","name":"Rotcap","level":6,"element":"nature","hp":88,"trait":"Sporebody","skill":"spore-cloud"}
+}
