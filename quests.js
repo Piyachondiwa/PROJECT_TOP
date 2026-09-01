@@ -1,20 +1,20 @@
 // Simple quest system. Data-driven so new quests can be added without rewriting the game loop.
 const QUEST_DATA = Object.freeze({
-  first-blood: {
+  'first-blood': {
     id: 'first-blood',
     name: 'First Harvest',
     description: 'Defeat your first monster and bring its seed back to the garden.',
     type: 'kill', target: 1, targetId: 'any',
     reward: { gold: 60, xp: 40 },
   },
-  garden-start: {
+  'garden-start': {
     id: 'garden-start',
     name: 'A Strange Seed',
     description: 'Plant a Monster Seed in the garden.',
     type: 'plant', target: 1, targetId: 'any',
     reward: { gold: 40, xp: 30 },
   },
-  harvest-one: {
+  'harvest-one': {
     id: 'harvest-one',
     name: 'First Harvest',
     description: 'Harvest a fully grown Monster Plant.',
