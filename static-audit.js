@@ -1,18 +1,28 @@
-// Static audit helper for Monster Garden.
-// Run in a browser console after loading index.html to report missing globals.
+// Runtime audit helper for Monster Garden.
+// Run in the browser console after index.html finishes loading.
 (() => {
-  const required = [
-    'MONSTER_DATA', 'ELEMENTS', 'GARDEN_PLOTS', 'player',
-    'attack', 'dodge', 'useMonsterSkill', 'update', 'draw',
-    'saveGame', 'loadGame', 'updateHud'
-  ];
-
   window.MonsterGarden = window.MonsterGarden || {};
   window.MonsterGarden.runStaticAudit = () => {
-    const missing = required.filter((name) => typeof window[name] === 'undefined');
-    const result = { ok: missing.length === 0, missing };
-    console.table(result.missing);
-    console.info(result.ok ? 'Monster Garden audit: OK' : `Monster Garden audit: missing ${missing.length} globals`);
+    const checks = {
+      canvas: typeof document !== 'undefined' && !!document.getElementById('game'),
+      monsterData: typeof MONSTER_DATA !== 'undefined',
+      elements: typeof ELEMENTS !== 'undefined',
+      gardenPlots: typeof GARDEN_PLOTS !== 'undefined',
+      player: typeof player !== 'undefined',
+      attack: typeof attack === 'function',
+      dodge: typeof dodge === 'function',
+      skill: typeof useMonsterSkill === 'function',
+      update: typeof update === 'function',
+      draw: typeof draw === 'function',
+      saveGame: typeof saveGame === 'function',
+      loadGame: typeof loadGame === 'function',
+      updateHud: typeof updateHud === 'function',
+    };
+
+    const missing = Object.entries(checks).filter(([, ok]) => !ok).map(([name]) => name);
+    const result = { ok: missing.length === 0, missing, checks };
+    console.table(checks);
+    console.info(result.ok ? 'Monster Garden audit: OK' : `Monster Garden audit: missing ${missing.length} checks`);
     return result;
   };
 })();
