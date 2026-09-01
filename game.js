@@ -10,19 +10,39 @@ const player = {
   speed: 170,
   hp: 100, maxHp: 100,
   mp: 50, maxMp: 50,
-  level: 1, gold: 100, seeds: 0,
+  xp: 0, xpToNext: 100, level: 1,
+  gold: 100,
+  seeds: {},
   facing: 'down',
   attackTimer: 0,
   dodgeTimer: 0,
   dodgeCooldown: 0,
   contactDamageCooldown: 0,
+  skillCooldown: 0,
+  skillId: 'ember-burst',
+  lastSafeX: 480,
+  lastSafeY: 360,
 };
 
-const monsters = [
-  { id: 'goblin', name: 'Goblin', x: 700, y: 380, spawnX: 700, spawnY: 380, w: 34, h: 38, hp: 45, maxHp: 45, level: 2, element: 'nature', seed: 'Goblin Seed', color: '#778c58', speed: 55, alive: true, hitFlash: 0 },
-  { id: 'slime', name: 'Fire Slime', x: 830, y: 520, spawnX: 830, spawnY: 520, w: 38, h: 30, hp: 55, maxHp: 55, level: 3, element: 'fire', seed: 'Fire Slime Seed', color: '#a86d4b', speed: 38, alive: true, hitFlash: 0 },
-  { id: 'wolf', name: 'Wolf', x: 560, y: 610, spawnX: 560, spawnY: 610, w: 44, h: 30, hp: 65, maxHp: 65, level: 4, element: 'nature', seed: 'Wolf Seed', color: '#77746f', speed: 75, alive: true, hitFlash: 0 },
-];
+function createMonster(data, x, y) {
+  return {
+    ...data,
+    x, y,
+    spawnX: x,
+    spawnY: y,
+    maxHp: data.baseHp + data.level * 4,
+    hp: data.baseHp + data.level * 4,
+    alive: true,
+    hitFlash: 0,
+    attackCooldown: 0,
+  };
+}
+
+const monsters = Object.values(MONSTER_DATA).map((data, index) => createMonster(
+  data,
+  [700, 830, 560][index],
+  [380, 520, 610][index]
+));
 
 const particles = [];
 let camera = { x: 0, y: 0 };
@@ -30,16 +50,16 @@ let worldTime = 8.0;
 let lastTime = performance.now();
 let messageTimer = 0;
 
-const elementColors = {
-  fire: '#b86b4d', ice: '#6e91a7', lightning: '#b0a16a', earth: '#81715c',
-  nature: '#6d8758', shadow: '#665a78', light: '#b6a56e', water: '#587c91', arcane: '#806b96'
-};
-
 window.addEventListener('keydown', (e) => {
-  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code)) e.preventDefault();
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  if (e.repeat) {
+    keys.add(e.code);
+    return;
+  }
   keys.add(e.code);
-  if ((e.code === 'KeyJ' || e.code === 'KeyZ') && !e.repeat) attack();
-  if (e.code === 'Space' && !e.repeat) dodge();
+  if (e.code === 'KeyJ' || e.code === 'KeyZ') attack();
+  if (e.code === 'Space') dodge();
+  if (e.code === 'KeyK' || e.code === 'KeyX') useMonsterSkill();
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
@@ -67,8 +87,7 @@ function isInAttackArc(monster, range, arcCos = 0.15) {
   const dist = Math.hypot(dx, dy);
   if (dist > range || dist === 0) return false;
   const f = getFacingVector();
-  const dot = (dx / dist) * f.x + (dy / dist) * f.y;
-  return dot >= arcCos;
+  return ((dx / dist) * f.x + (dy / dist) * f.y) >= arcCos;
 }
 
 function attack() {
@@ -78,22 +97,90 @@ function attack() {
   const range = 68;
   for (const monster of monsters) {
     if (!monster.alive || !isInAttackArc(monster, range)) continue;
-    const damage = 18 + player.level * 2;
+    const multiplier = getElementMultiplier(ELEMENTS.ARCANE, monster.element);
+    const damage = Math.max(1, Math.round((18 + player.level * 2) * multiplier));
     monster.hp = Math.max(0, monster.hp - damage);
     monster.hitFlash = 0.12;
     burst(monster.x, monster.y, '#ded6b7', 7);
+    showMessage(`Hit ${monster.name} for ${damage}${multiplier > 1 ? ' • Weakness!' : ''}`);
     if (monster.hp <= 0) killMonster(monster);
   }
 }
 
+function useMonsterSkill() {
+  if (player.skillCooldown > 0 || player.dodgeTimer > 0) return;
+  const ownedSkills = Object.values(MONSTER_DATA)
+    .map((m) => m.skill)
+    .filter(Boolean);
+  const skill = ownedSkills.find((s) => s.id === player.skillId) || ownedSkills[0];
+  if (!skill) return;
+  if (player.mp < skill.cost) {
+    showMessage('Not enough MP.');
+    return;
+  }
+
+  player.mp -= skill.cost;
+  player.skillCooldown = 1.1;
+  const range = skill.id === 'predator-dash' ? 96 : 82;
+  const f = getFacingVector();
+
+  if (skill.id === 'predator-dash') {
+    player.x += f.x * 70;
+    player.y += f.y * 70;
+    clampPlayer();
+  }
+
+  let hit = false;
+  for (const monster of monsters) {
+    if (!monster.alive || !isInAttackArc(monster, range, 0.0)) continue;
+    const multiplier = getElementMultiplier(skillElement(skill), monster.element);
+    const damage = Math.max(1, Math.round(skill.power * multiplier));
+    monster.hp = Math.max(0, monster.hp - damage);
+    monster.hitFlash = 0.18;
+    burst(monster.x, monster.y, elementColors[skillElement(skill)] || '#ddd', 10);
+    hit = true;
+    if (monster.hp <= 0) killMonster(monster);
+  }
+  showMessage(`${skill.name}${hit ? ' • Hit!' : ''}`);
+}
+
+function skillElement(skill) {
+  if (skill.id === 'ember-burst') return ELEMENTS.FIRE;
+  if (skill.id === 'goblin-rush') return ELEMENTS.NATURE;
+  if (skill.id === 'predator-dash') return ELEMENTS.NATURE;
+  return ELEMENTS.ARCANE;
+}
+
+function addSeed(monster) {
+  player.seeds[monster.id] = (player.seeds[monster.id] || 0) + 1;
+}
+
 function killMonster(monster) {
+  if (!monster.alive) return;
   monster.alive = false;
   player.gold += 15 + monster.level * 5;
-  player.seeds += 1;
+  addSeed(monster);
+  player.xp += 25 + monster.level * 10;
   player.mp = Math.min(player.maxMp, player.mp + 5);
   burst(monster.x, monster.y, elementColors[monster.element] || '#aaa', 18);
-  showMessage(`${monster.name} fell → ${monster.seed}`);
-  setTimeout(() => respawnMonster(monster), 4500);
+  showMessage(`${monster.name} fell → ${monster.seedName} • +XP`);
+  checkLevelUp();
+  window.setTimeout(() => respawnMonster(monster), 4500);
+}
+
+function checkLevelUp() {
+  let leveled = false;
+  while (player.xp >= player.xpToNext) {
+    player.xp -= player.xpToNext;
+    player.level += 1;
+    player.xpToNext = Math.floor(player.xpToNext * 1.35);
+    player.maxHp += 12;
+    player.maxMp += 6;
+    player.hp = player.maxHp;
+    player.mp = player.maxMp;
+    leveled = true;
+  }
+  if (leveled) showMessage(`Level Up! You are now Lv.${player.level}`);
 }
 
 function respawnMonster(monster) {
@@ -102,6 +189,7 @@ function respawnMonster(monster) {
   monster.x = monster.spawnX;
   monster.y = monster.spawnY;
   monster.hitFlash = 0;
+  monster.attackCooldown = 0;
 }
 
 function dodge() {
@@ -126,10 +214,11 @@ function dodge() {
 function update(dt) {
   worldTime += dt / 70;
   if (worldTime >= 24) worldTime -= 24;
-  if (player.attackTimer > 0) player.attackTimer = Math.max(0, player.attackTimer - dt);
-  if (player.dodgeTimer > 0) player.dodgeTimer = Math.max(0, player.dodgeTimer - dt);
-  if (player.dodgeCooldown > 0) player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
-  if (player.contactDamageCooldown > 0) player.contactDamageCooldown = Math.max(0, player.contactDamageCooldown - dt);
+  player.attackTimer = Math.max(0, player.attackTimer - dt);
+  player.dodgeTimer = Math.max(0, player.dodgeTimer - dt);
+  player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
+  player.contactDamageCooldown = Math.max(0, player.contactDamageCooldown - dt);
+  player.skillCooldown = Math.max(0, player.skillCooldown - dt);
   if (messageTimer > 0) {
     messageTimer -= dt;
     if (messageTimer <= 0) document.getElementById('message').classList.remove('show');
@@ -140,6 +229,7 @@ function update(dt) {
   if (keys.has('KeyD') || keys.has('ArrowRight')) dx += 1;
   if (keys.has('KeyW') || keys.has('ArrowUp')) dy -= 1;
   if (keys.has('KeyS') || keys.has('ArrowDown')) dy += 1;
+
   const moving = dx !== 0 || dy !== 0;
   if (moving && player.dodgeTimer <= 0) {
     const len = Math.hypot(dx, dy) || 1;
@@ -160,31 +250,48 @@ function update(dt) {
 
 function updateMonster(m, dt) {
   if (!m.alive) return;
-  if (m.hitFlash > 0) m.hitFlash = Math.max(0, m.hitFlash - dt);
+  m.hitFlash = Math.max(0, m.hitFlash - dt);
+  m.attackCooldown = Math.max(0, m.attackCooldown - dt);
+
   const dx = player.x - m.x, dy = player.y - m.y;
   const dist = Math.hypot(dx, dy);
   if (dist < 260 && dist > 45) {
     m.x += (dx / dist) * m.speed * dt;
     m.y += (dy / dist) * m.speed * dt;
   }
-  if (dist < 42 && player.dodgeTimer <= 0 && player.contactDamageCooldown <= 0) {
+
+  if (dist < 42 && player.dodgeTimer <= 0 && m.attackCooldown <= 0) {
     player.hp = Math.max(0, player.hp - (6 + m.level));
     player.contactDamageCooldown = 0.65;
+    m.attackCooldown = 0.65;
     burst(player.x, player.y, '#a86464', 4);
-    if (player.hp <= 0) {
-      player.hp = player.maxHp;
-      player.mp = player.maxMp;
-      player.contactDamageCooldown = 1.0;
-      showMessage('You collapsed and woke up at the last safe place.');
-      player.x = 480;
-      player.y = 360;
-    }
+    if (player.hp <= 0) collapsePlayer();
   }
+}
+
+function collapsePlayer() {
+  player.hp = player.maxHp;
+  player.mp = player.maxMp;
+  player.contactDamageCooldown = 1.0;
+  player.skillCooldown = 0.5;
+  player.x = player.lastSafeX;
+  player.y = player.lastSafeY;
+  showMessage('You collapsed and woke up at the last safe place.');
 }
 
 function clampPlayer() {
   player.x = Math.max(30, Math.min(WORLD.width - 30, player.x));
   player.y = Math.max(30, Math.min(WORLD.height - 30, player.y));
+}
+
+function updateParticles(dt) {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.life -= dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
 }
 
 function burst(x, y, color, count) {
@@ -196,16 +303,6 @@ function burst(x, y, color, count) {
       life: 0.35 + Math.random() * 0.35,
       color,
     });
-  }
-}
-
-function updateParticles(dt) {
-  for (let i = particles.length - 1; i >= 0; i--) {
-    const p = particles[i];
-    p.life -= dt;
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
-    if (p.life <= 0) particles.splice(i, 1);
   }
 }
 
@@ -222,7 +319,8 @@ function draw() {
 function drawWorld() {
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
-  ctx.fillStyle = '#33443b'; ctx.fillRect(0, 0, WORLD.width, WORLD.height);
+  ctx.fillStyle = '#33443b';
+  ctx.fillRect(0, 0, WORLD.width, WORLD.height);
   for (let y = 0; y < WORLD.height; y += 64) {
     for (let x = 0; x < WORLD.width; x += 64) {
       const n = ((x * 17 + y * 31) % 11);
@@ -238,13 +336,13 @@ function drawWorld() {
   ctx.fillStyle = '#a58a61'; ctx.fillRect(455, 330, 60, 50);
   ctx.fillStyle = '#9b774d'; ctx.fillRect(520, 270, 18, 55);
   ctx.fillStyle = '#c5a36d'; ctx.fillRect(518, 258, 22, 16);
-  ctx.fillStyle = '#d0b17a'; ctx.fillRect(548, 274, 5, 5);
-  ctx.fillRect(566, 288, 5, 5);
+  ctx.fillStyle = '#d0b17a'; ctx.fillRect(548, 274, 5, 5); ctx.fillRect(566, 288, 5, 5);
   ctx.restore();
 }
 
 function drawPlants() {
-  ctx.save(); ctx.translate(-camera.x, -camera.y);
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
   const plots = [
     [690, 780], [760, 780], [830, 780], [900, 780],
     [690, 850], [760, 850], [830, 850], [900, 850]
@@ -253,8 +351,7 @@ function drawPlants() {
     ctx.fillStyle = '#604f3b'; ctx.fillRect(x, y, 52, 40);
     ctx.fillStyle = '#776047'; ctx.fillRect(x + 4, y + 5, 44, 30);
     ctx.fillStyle = '#536b4d'; ctx.fillRect(x + 23, y + 10, 7, 18);
-    ctx.fillStyle = '#668457'; ctx.fillRect(x + 15, y + 7, 14, 8);
-    ctx.fillRect(x + 28, y + 13, 12, 8);
+    ctx.fillStyle = '#668457'; ctx.fillRect(x + 15, y + 7, 14, 8); ctx.fillRect(x + 28, y + 13, 12, 8);
   }
   ctx.fillStyle = '#d0c3a1'; ctx.font = '14px monospace'; ctx.fillText('MONSTER GARDEN', 690, 760);
   ctx.restore();
@@ -263,7 +360,7 @@ function drawPlants() {
 function drawPlayer() {
   ctx.save();
   ctx.translate(Math.round(player.x - camera.x), Math.round(player.y - camera.y));
-  const moving = keys.has('KeyW') || keys.has('KeyA') || keys.has('KeyS') || keys.has('KeyD') || keys.has('ArrowUp') || keys.has('ArrowDown') || keys.has('ArrowLeft') || keys.has('ArrowRight');
+  const moving = ['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].some((k) => keys.has(k));
   const bob = moving && player.dodgeTimer <= 0 ? Math.sin(performance.now() / 90) * 2 : 0;
   ctx.translate(0, bob);
   ctx.fillStyle = '#16191a'; ctx.fillRect(-10, 12, 20, 18);
@@ -275,16 +372,11 @@ function drawPlayer() {
   if (player.attackTimer > 0) {
     const f = getFacingVector();
     const angle = Math.atan2(f.y, f.x);
-    ctx.strokeStyle = '#d9d2b5';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(0, 3, 45, angle - 0.85, angle + 0.85);
-    ctx.stroke();
+    ctx.strokeStyle = '#d9d2b5'; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(0, 3, 45, angle - 0.85, angle + 0.85); ctx.stroke();
   }
   if (player.dodgeTimer > 0) {
-    ctx.globalAlpha = 0.45;
-    ctx.fillStyle = '#d8d0b0';
-    ctx.fillRect(-22, -25, 44, 65);
+    ctx.globalAlpha = 0.45; ctx.fillStyle = '#d8d0b0'; ctx.fillRect(-22, -25, 44, 65);
   }
   ctx.restore();
 }
@@ -303,7 +395,8 @@ function drawMonster(m) {
   }
   ctx.fillStyle = '#17191a'; ctx.fillRect(-7, -7, 4, 4); ctx.fillRect(4, -7, 4, 4);
   drawHpBar(m);
-  ctx.fillStyle = '#ddd6bf'; ctx.font = '10px monospace'; ctx.textAlign = 'center'; ctx.fillText(`${m.name} Lv.${m.level}`, 0, -30);
+  ctx.fillStyle = '#ddd6bf'; ctx.font = '10px monospace'; ctx.textAlign = 'center';
+  ctx.fillText(`${m.name} Lv.${m.level} • ${m.element}`, 0, -30);
   ctx.restore();
 }
 
@@ -336,8 +429,14 @@ function updateHud() {
   document.getElementById('hp-text').textContent = `${hp} / ${player.maxHp}`;
   document.getElementById('mp-text').textContent = `${mp} / ${player.maxMp}`;
   document.getElementById('level').textContent = player.level;
+  document.getElementById('xp').textContent = `${player.xp} / ${player.xpToNext}`;
   document.getElementById('gold').textContent = player.gold;
-  document.getElementById('seeds').textContent = player.seeds;
+  const totalSeeds = Object.values(player.seeds).reduce((sum, count) => sum + count, 0);
+  document.getElementById('seeds').textContent = totalSeeds;
+  const totalMinutes = Math.floor(worldTime * 60);
+  const hours = Math.floor(totalMinutes / 60) % 24;
+  const minutes = totalMinutes % 60;
+  document.getElementById('time').textContent = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function loop(now) {
