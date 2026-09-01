@@ -23,7 +23,9 @@ function getPlayerMoveSpeed() {
 
 function applyIncomingElementDamage(amount, element) {
   const effects = getTraitEffects();
-  if (element === ELEMENTS.FIRE) return Math.max(1, Math.round(amount * (1 - effects.fireResistance)));
+  if (element === ELEMENTS.FIRE) {
+    return Math.max(1, Math.round(amount * (1 - effects.fireResistance)));
+  }
   return Math.max(1, Math.round(amount));
 }
 
