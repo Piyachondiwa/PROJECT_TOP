@@ -1,7 +1,7 @@
 // Monster Plant evolution system.
 // Plants keep their monster identity while gaining growth stages and mutations.
 
-const PLANT_MUTATIONS = Object.freeze([
+const PLANT_EVOLUTION_MUTATIONS = Object.freeze([
   { id: 'shadow-bloom', parents: ['wolf', 'bat'], result: 'shadow-bloom', trait: 'Night Prowler' },
   { id: 'ember-cap', parents: ['slime', 'mushroom'], result: 'ember-cap', trait: 'Scorch Spores' },
   { id: 'thorn-goblin', parents: ['goblin', 'mushroom'], result: 'thorn-goblin', trait: 'Bramble Skin' },
@@ -24,7 +24,7 @@ function getPlantSpecies(id) {
 
 function getPlantMutation(a, b) {
   const pair = [a, b].sort();
-  return PLANT_MUTATIONS.find((mutation) => {
+  return PLANT_EVOLUTION_MUTATIONS.find((mutation) => {
     const parents = [...mutation.parents].sort();
     return parents[0] === pair[0] && parents[1] === pair[1];
   }) || null;
