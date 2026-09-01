@@ -1,0 +1,5 @@
+/* Small readability pass for the game's UI. */
+:root { --ui-bg: rgba(14, 15, 18, 0.92); --ui-border: #736c59; --ui-text: #e8e2cf; }
+.panel, .hud-box, .dialogue { border: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-text); }
+button { font: inherit; color: inherit; background: #2a2d2c; border: 1px solid #6c6654; padding: 8px 10px; cursor: pointer; }
+button:focus-visible { outline: 2px solid #e8e2cf; outline-offset: 2px; }
