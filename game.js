@@ -52,19 +52,28 @@ let messageTimer = 0;
 
 window.addEventListener('keydown', (e) => {
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
-
-  if (!e.repeat) {
-    if (e.code === 'KeyJ' || e.code === 'KeyZ') attack();
-    if (e.code === 'Space') dodge();
-    if (e.code === 'KeyK' || e.code === 'KeyX') useMonsterSkill();
-    if (e.code === 'KeyE') interactWithGarden();
-    if (e.code === 'KeyI') toggleInventory();
-    if (e.code === 'KeyQ') eatSelectedFood();
-    if (e.code === 'Digit1') selectSkill(0);
-    if (e.code === 'Digit2') selectSkill(1);
-    if (e.code === 'Digit3') selectSkill(2);
+  if (e.repeat) {
+    keys.add(e.code);
+    return;
   }
   keys.add(e.code);
+  if (e.code === 'KeyJ' || e.code === 'KeyZ') attack();
+  if (e.code === 'Space') dodge();
+  if (e.code === 'KeyK' || e.code === 'KeyX') useMonsterSkill();
+  if (e.code === 'KeyE') interactWithGarden();
+  if (e.code === 'KeyI') toggleInventory();
+  if (e.code === 'KeyQ') eatSelectedFood();
+  if (e.code === 'Digit1') selectSkill(0);
+  if (e.code === 'Digit2') selectSkill(1);
+  if (e.code === 'Digit3') selectSkill(2);
+  if (e.code === 'F5') {
+    e.preventDefault();
+    saveGame(true);
+  }
+  if (e.code === 'F9') {
+    e.preventDefault();
+    loadGame(true);
+  }
 });
 window.addEventListener('keyup', (e) => keys.delete(e.code));
 window.addEventListener('blur', () => keys.clear());
@@ -106,13 +115,14 @@ function selectSkill(index) {
   if (!skills[index]) return;
   player.skillId = skills[index].id;
   showMessage(`Skill: ${skills[index].name}`);
-  renderInventory();
+  if (typeof renderInventory === 'function') renderInventory();
 }
 
 function attack() {
-  if (player.attackTimer > 0 || player.dodgeTimer > 0) return;
+  if (player.attackTimer > 0 || player.dodgeTimer > 0 || inventoryState.open) return;
   player.attackTimer = 0.28;
 
+  let hit = false;
   for (const monster of monsters) {
     if (!monster.alive || !isInAttackArc(monster, 68)) continue;
     const multiplier = getElementMultiplier(ELEMENTS.ARCANE, monster.element);
@@ -120,13 +130,14 @@ function attack() {
     monster.hp = Math.max(0, monster.hp - damage);
     monster.hitFlash = 0.12;
     burst(monster.x, monster.y, '#ded6b7', 7);
-    showMessage(`Hit ${monster.name} for ${damage}${multiplier > 1 ? ' • Weakness!' : ''}`);
+    hit = true;
     if (monster.hp <= 0) killMonster(monster);
   }
+  if (hit) showMessage('Attack hit!');
 }
 
 function useMonsterSkill() {
-  if (player.skillCooldown > 0 || player.dodgeTimer > 0) return;
+  if (player.skillCooldown > 0 || player.dodgeTimer > 0 || inventoryState.open) return;
   const skills = getAvailableSkills();
   const skill = skills.find((item) => item.id === player.skillId) || skills[0];
   if (!skill) return;
@@ -210,7 +221,7 @@ function respawnMonster(monster) {
 }
 
 function dodge() {
-  if (player.dodgeCooldown > 0 || player.dodgeTimer > 0) return;
+  if (player.dodgeCooldown > 0 || player.dodgeTimer > 0 || inventoryState.open) return;
   player.dodgeTimer = 0.22;
   player.dodgeCooldown = 0.65;
   let dx = (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) - (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0);
@@ -228,8 +239,7 @@ function dodge() {
 }
 
 function update(dt) {
-  worldTime += dt / 70;
-  if (worldTime >= 24) worldTime -= 24;
+  worldTime = (worldTime + dt / 70) % 24;
   player.attackTimer = Math.max(0, player.attackTimer - dt);
   player.dodgeTimer = Math.max(0, player.dodgeTimer - dt);
   player.dodgeCooldown = Math.max(0, player.dodgeCooldown - dt);
@@ -274,15 +284,14 @@ function updateMonster(m, dt) {
   const dy = player.y - m.y;
   const dist = Math.hypot(dx, dy);
 
-  if (dist < 260 && dist > 45) {
+  if (!inventoryState.open && dist < 260 && dist > 45) {
     m.x += (dx / dist) * m.speed * dt;
     m.y += (dy / dist) * m.speed * dt;
   }
 
-  if (dist < 42 && player.dodgeTimer <= 0 && m.attackCooldown <= 0) {
+  if (!inventoryState.open && dist < 42 && player.dodgeTimer <= 0 && m.attackCooldown <= 0) {
     const before = player.hp;
     player.hp = Math.max(0, player.hp - (6 + m.level));
-    player.contactDamageCooldown = 0.65;
     m.attackCooldown = 0.65;
     if (player.hp < before) burst(player.x, player.y, '#a86464', 4);
     if (player.hp <= 0) collapsePlayer();
@@ -316,7 +325,13 @@ function updateParticles(dt) {
 
 function burst(x, y, color, count) {
   for (let i = 0; i < count; i++) {
-    particles.push({ x, y, vx: (Math.random() - 0.5) * 100, vy: (Math.random() - 0.5) * 100, life: 0.35 + Math.random() * 0.35, color });
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 100,
+      vy: (Math.random() - 0.5) * 100,
+      life: 0.35 + Math.random() * 0.35,
+      color,
+    });
   }
 }
 
@@ -360,10 +375,14 @@ function drawPlants() {
   ctx.save();
   ctx.translate(-camera.x, -camera.y);
   for (const plot of GARDEN_PLOTS) {
-    ctx.fillStyle = '#604f3b'; ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
-    ctx.fillStyle = '#776047'; ctx.fillRect(plot.x + 4, plot.y + 5, plot.w - 8, plot.h - 10);
+    ctx.fillStyle = '#604f3b';
+    ctx.fillRect(plot.x, plot.y, plot.w, plot.h);
+    ctx.fillStyle = '#776047';
+    ctx.fillRect(plot.x + 4, plot.y + 5, plot.w - 8, plot.h - 10);
   }
-  ctx.fillStyle = '#d0c3a1'; ctx.font = '14px monospace'; ctx.fillText('MONSTER GARDEN', 690, 760);
+  ctx.fillStyle = '#d0c3a1';
+  ctx.font = '14px monospace';
+  ctx.fillText('MONSTER GARDEN', 690, 760);
   ctx.restore();
 }
 
@@ -398,7 +417,7 @@ function drawMonster(m) {
   if (m.id === 'slime') {
     ctx.beginPath(); ctx.arc(0, 0, 18, Math.PI, 0); ctx.lineTo(18, 13); ctx.lineTo(-18, 13); ctx.closePath(); ctx.fill();
   } else if (m.id === 'wolf') {
-    ctx.beginPath(); ctx.moveTo(-23,10); ctx.lineTo(-8,-10); ctx.lineTo(10,-12); ctx.lineTo(24,4); ctx.lineTo(12,14); ctx.lineTo(-15,14); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-23, 10); ctx.lineTo(-8, -10); ctx.lineTo(10, -12); ctx.lineTo(24, 4); ctx.lineTo(12, 14); ctx.lineTo(-15, 14); ctx.closePath(); ctx.fill();
   } else {
     ctx.fillRect(-15, -17, 30, 34); ctx.fillRect(-19, -21, 8, 8); ctx.fillRect(11, -21, 8, 8);
   }
@@ -416,16 +435,25 @@ function drawHpBar(m) {
 }
 
 function drawParticle(p) {
-  ctx.save(); ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2)); ctx.fillStyle = p.color;
-  ctx.fillRect(Math.round(p.x - camera.x), Math.round(p.y - camera.y), 4, 4); ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2));
+  ctx.fillStyle = p.color;
+  ctx.fillRect(Math.round(p.x - camera.x), Math.round(p.y - camera.y), 4, 4);
+  ctx.restore();
 }
 
 function drawGardenHint() {
   const hint = getGardenHint();
   if (!hint) return;
   const plot = getNearbyPlot();
-  ctx.save(); ctx.translate(-camera.x, -camera.y); ctx.fillStyle = '#eee4c9'; ctx.font = '12px monospace'; ctx.textAlign = 'center';
-  ctx.fillText(hint, plot.x + plot.w / 2, plot.y - 10); ctx.restore();
+  if (!plot) return;
+  ctx.save();
+  ctx.translate(-camera.x, -camera.y);
+  ctx.fillStyle = '#eee4c9';
+  ctx.font = '12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(hint, plot.x + plot.w / 2, plot.y - 10);
+  ctx.restore();
 }
 
 function drawNightOverlay() {
@@ -445,10 +473,9 @@ function updateHud() {
   document.getElementById('level').textContent = player.level;
   document.getElementById('xp').textContent = `${player.xp} / ${player.xpToNext}`;
   document.getElementById('gold').textContent = player.gold;
-  document.getElementById('seeds').textContent = Object.values(player.seeds).reduce((sum, count) => sum + count, 0);
+  document.getElementById('seeds').textContent = Object.values(player.seeds).reduce((sum, count) => sum + Math.max(0, count || 0), 0);
   document.getElementById('time').textContent = formatWorldTime(worldTime);
-  const foodCount = getTotalFoodCount();
-  document.getElementById('foods').textContent = foodCount;
+  document.getElementById('foods').textContent = getTotalFoodCount();
   document.getElementById('power').textContent = Object.keys(player.activeTraits || {}).length;
 }
 
@@ -457,19 +484,6 @@ function formatWorldTime(time) {
   const minutes = Math.floor((time - Math.floor(time)) * 60);
   return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
-
-let inventoryState = window.inventoryState || { open: false, selectedFoodId: null };
-function renderInventory() {
-  if (typeof window.renderInventory === 'function' && window.renderInventory !== renderInventory) window.renderInventory();
-}
-function toggleInventory() {
-  inventoryState.open = !inventoryState.open;
-  if (typeof window.renderInventory === 'function') window.renderInventory();
-}
-function getTotalFoodCount() {
-  return Object.values(player.foods || {}).reduce((sum, count) => sum + Math.max(0, count || 0), 0);
-}
-function getGardenHintSafe() { return typeof getGardenHint === 'function' ? getGardenHint() : null; }
 
 function loop(now) {
   const dt = Math.min((now - lastTime) / 1000, 0.05);
@@ -480,6 +494,10 @@ function loop(now) {
 }
 
 if (!player.foods) player.foods = {};
+if (!player.activeTraits) player.activeTraits = {};
+if (!(player.unlockedSkillIds instanceof Set)) player.unlockedSkillIds = new Set(['ember-burst']);
+if (typeof renderInventory === 'function') renderInventory();
+loadGame(false);
 showMessage('Explore the wilds. The garden is waiting.');
 updateHud();
 requestAnimationFrame(loop);
