@@ -1,16 +1,9 @@
 // Monster Garden data-driven content.
-// Add future monsters, seeds, traits and skills here without rewriting combat logic.
+// Add monsters, seeds, traits and skills here without changing core systems.
 
 const ELEMENTS = Object.freeze({
-  FIRE: 'fire',
-  WATER: 'water',
-  LIGHTNING: 'lightning',
-  EARTH: 'earth',
-  NATURE: 'nature',
-  ICE: 'ice',
-  SHADOW: 'shadow',
-  LIGHT: 'light',
-  ARCANE: 'arcane',
+  FIRE: 'fire', WATER: 'water', LIGHTNING: 'lightning', EARTH: 'earth',
+  NATURE: 'nature', ICE: 'ice', SHADOW: 'shadow', LIGHT: 'light', ARCANE: 'arcane',
 });
 
 const ELEMENT_ADVANTAGE = Object.freeze({
@@ -29,22 +22,25 @@ const MONSTER_DATA = Object.freeze({
   goblin: {
     id: 'goblin', name: 'Goblin', element: ELEMENTS.NATURE,
     baseHp: 45, level: 2, speed: 55, seedName: 'Goblin Seed',
-    trait: 'Scavenger', traitDescription: 'Better chance to find extra materials.',
-    skill: { id: 'goblin-rush', name: 'Goblin Rush', cost: 8, power: 22 },
+    trait: 'Scavenger', traitDescription: 'Improves material drop chance.',
+    traitEffects: { dropRate: 0.10 },
+    skill: { id: 'goblin-rush', name: 'Goblin Rush', cost: 8, power: 22, element: ELEMENTS.NATURE },
     color: '#778c58',
   },
   slime: {
     id: 'slime', name: 'Fire Slime', element: ELEMENTS.FIRE,
     baseHp: 55, level: 3, speed: 38, seedName: 'Fire Slime Seed',
-    trait: 'Ember Skin', traitDescription: 'Grants minor fire resistance.',
-    skill: { id: 'ember-burst', name: 'Ember Burst', cost: 10, power: 28 },
+    trait: 'Ember Skin', traitDescription: 'Reduces fire damage taken.',
+    traitEffects: { fireResistance: 0.20 },
+    skill: { id: 'ember-burst', name: 'Ember Burst', cost: 10, power: 28, element: ELEMENTS.FIRE },
     color: '#a86d4b',
   },
   wolf: {
     id: 'wolf', name: 'Wolf', element: ELEMENTS.NATURE,
     baseHp: 65, level: 4, speed: 75, seedName: 'Wolf Seed',
-    trait: 'Predator', traitDescription: 'Improves movement speed.',
-    skill: { id: 'predator-dash', name: 'Predator Dash', cost: 12, power: 34 },
+    trait: 'Predator', traitDescription: 'Increases movement speed.',
+    traitEffects: { moveSpeed: 0.15 },
+    skill: { id: 'predator-dash', name: 'Predator Dash', cost: 12, power: 34, element: ELEMENTS.NATURE },
     color: '#77746f',
   },
 });
