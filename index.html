@@ -23,28 +23,13 @@
       <div class="hud-box controls">WASD / Arrows: Move | Space: Dodge | J/Z: Attack | K/X: Skill | E: Interact/Garden | I: Inventory | 1-3: Skill | Q: Eat | R: Rest | F5/F9: Save/Load</div>
     </section>
     <div id="message"></div>
-    <section id="inventory" class="panel hidden" aria-label="Inventory">
-      <div class="panel-title">INVENTORY</div>
-      <div id="inventory-content"></div>
-      <div class="panel-help">I: Close | 1-3: Select Skill | Q: Eat selected food</div>
-    </section>
-    <section id="shop" class="panel hidden" aria-label="Shop">
-      <div class="panel-title">SHOP</div>
-      <div id="shop-content"></div>
-      <div class="panel-help">E / Escape: Close Shop</div>
-    </section>
-    <section id="dialogue" class="dialogue hidden" aria-label="Dialogue">
-      <div id="dialogue-name" class="dialogue-name"></div>
-      <div id="dialogue-text" class="dialogue-text"></div>
-      <div class="dialogue-help">E / Enter: Continue | Escape: Close</div>
-    </section>
-    <section id="quest-panel" class="panel hidden" aria-label="Quest">
-      <div class="panel-title">QUEST</div>
-      <div id="quest-content"></div>
-      <div class="panel-help">E / Escape: Close</div>
-    </section>
+    <section id="inventory" class="panel hidden" aria-label="Inventory"><div class="panel-title">INVENTORY</div><div id="inventory-content"></div><div class="panel-help">I: Close | 1-3: Select Skill | Q: Eat selected food</div></section>
+    <section id="shop" class="panel hidden" aria-label="Shop"><div class="panel-title">SHOP</div><div id="shop-content"></div><div class="panel-help">E / Escape: Close Shop</div></section>
+    <section id="dialogue" class="dialogue hidden" aria-label="Dialogue"><div id="dialogue-name" class="dialogue-name"></div><div id="dialogue-text" class="dialogue-text"></div><div class="dialogue-help">E / Enter: Continue | Escape: Close</div></section>
+    <section id="quest-panel" class="panel hidden" aria-label="Quest"><div class="panel-title">QUEST</div><div id="quest-content"></div><div class="panel-help">E / Escape: Close</div></section>
   </main>
 
+  <!-- Data -->
   <script src="data.js"></script>
   <script src="items-data.js"></script>
   <script src="kingdoms.js"></script>
@@ -60,6 +45,7 @@
   <script src="content-registry.js"></script>
   <script src="gameplay-contracts.js"></script>
 
+  <!-- Core -->
   <script src="world.js"></script>
   <script src="save-utils.js"></script>
   <script src="storage.js"></script>
@@ -80,6 +66,7 @@
   <script src="quest-rewards.js"></script>
   <script src="world-progression.js"></script>
 
+  <!-- Gameplay -->
   <script src="garden.js"></script>
   <script src="plant-system.js"></script>
   <script src="plant-evolution.js"></script>
@@ -116,7 +103,9 @@
   <script src="travel-runtime.js"></script>
   <script src="world-events.js"></script>
   <script src="gameplay-loop.js"></script>
+  <script src="npc-dialogue.js"></script>
 
+  <!-- UI -->
   <script src="ui-town.js"></script>
   <script src="dialogue.js"></script>
   <script src="quest-ui.js"></script>
@@ -135,11 +124,13 @@
   <script src="combat-feedback.js"></script>
   <script src="asset-pipeline.js"></script>
   <script src="audio-plan.js"></script>
-
+  <script src="accessibility.js"></script>
+  <script src="render-fallback.js"></script>
   <script src="runtime-smoke-check.js"></script>
   <script src="runtime-startup.js"></script>
   <script src="runtime-test-manifest.js"></script>
-  <script src="gameplay-contracts.js"></script>
+
+  <!-- Final game loop -->
   <script src="game.js"></script>
 </body>
 </html>
