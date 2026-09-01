@@ -6,7 +6,6 @@
   <title>Monster Garden</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="dialogue.css" />
-  <link rel="stylesheet" href="accessibility.css" />
 </head>
 <body>
   <main id="game-root">
@@ -28,51 +27,20 @@
     <section id="dialogue" class="dialogue hidden" aria-label="Dialogue"><div id="dialogue-name" class="dialogue-name"></div><div id="dialogue-text" class="dialogue-text"></div><div class="dialogue-help">E / Enter: Continue | Escape: Close</div></section>
     <section id="quest-panel" class="panel hidden" aria-label="Quest"><div class="panel-title">QUEST</div><div id="quest-content"></div><div class="panel-help">E / Escape: Close</div></section>
   </main>
-
-  <!-- Data -->
   <script src="data.js"></script>
   <script src="items-data.js"></script>
   <script src="monsters.js"></script>
-  <script src="region-content.js"></script>
-  <script src="farming-content.js"></script>
-  <script src="npc-services-data.js"></script>
-  <script src="quest-content.js"></script>
-  <script src="boss-runtime-data.js"></script>
-  <script src="travel-gates.js"></script>
-  <script src="world-map.js"></script>
-  <script src="content-registry.js"></script>
-
-  <!-- Core -->
   <script src="world.js"></script>
-  <script src="save-utils.js"></script>
   <script src="storage.js"></script>
   <script src="systems.js"></script>
-  <script src="input-map.js"></script>
-  <script src="runtime-contracts.js"></script>
-  <script src="runtime-guards.js"></script>
-  <script src="runtime-health.js"></script>
-  <script src="world-save-schema.js"></script>
-  <script src="integration-api.js"></script>
-  <script src="integration-runtime.js"></script>
-  <script src="system-bridge.js"></script>
-  <script src="integration-state.js"></script>
   <script src="player-stats.js"></script>
   <script src="equipment.js"></script>
   <script src="items-system.js"></script>
   <script src="economy.js"></script>
-  <script src="quest-rewards.js"></script>
-  <script src="world-progression.js"></script>
-
-  <!-- Gameplay -->
   <script src="garden.js"></script>
   <script src="plant-system.js"></script>
-  <script src="plant-evolution.js"></script>
-  <script src="garden-mutation-data.js"></script>
-  <script src="plant-harvest-effects.js"></script>
   <script src="inventory.js"></script>
   <script src="food-effects.js"></script>
-  <script src="seed-discovery.js"></script>
-  <script src="resource-nodes.js"></script>
   <script src="quests.js"></script>
   <script src="quest.js"></script>
   <script src="npc.js"></script>
@@ -89,22 +57,14 @@
   <script src="status-effects.js"></script>
   <script src="combat-tuning.js"></script>
   <script src="combat-advanced.js"></script>
-  <script src="crafting.js"></script>
-  <script src="equipment-ui.js"></script>
-  <script src="crafting-screen.js"></script>
-  <script src="player-profile.js"></script>
   <script src="travel-runtime.js"></script>
   <script src="world-events.js"></script>
   <script src="gameplay-loop.js"></script>
-
-  <!-- UI -->
-  <script src="ui-town.js"></script>
   <script src="quest-ui.js"></script>
   <script src="services-ui.js"></script>
   <script src="travel-ui.js"></script>
   <script src="monster-codex-ui.js"></script>
   <script src="progression-ui.js"></script>
-  <script src="runtime-ui.js"></script>
   <script src="combat-ui.js"></script>
   <script src="garden-ui.js"></script>
   <script src="ui-panels.js"></script>
@@ -112,16 +72,10 @@
   <script src="visual-style.js"></script>
   <script src="camera-effects.js"></script>
   <script src="combat-feedback.js"></script>
-  <script src="asset-pipeline.js"></script>
-  <script src="audio-plan.js"></script>
-  <script src="accessibility.js"></script>
   <script src="render-fallback.js"></script>
-  <script src="runtime-smoke-check.js"></script>
+  <script src="runtime-health.js"></script>
   <script src="runtime-startup.js"></script>
-  <script src="runtime-test-manifest.js"></script>
-  <script src="static-audit.js"></script>
-
-  <!-- Final game loop -->
   <script src="game.js"></script>
+  <script src="static-audit.js"></script>
 </body>
 </html>
