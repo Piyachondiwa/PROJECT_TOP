@@ -1,0 +1,26 @@
+// Development status snapshot for Monster Garden.
+// Kept separate from runtime game code so production logic stays clean.
+const FEATURE_STATUS = Object.freeze({
+  coreMovement: 'prototype',
+  combatBasic: 'prototype',
+  dodge: 'prototype',
+  monsterSeeds: 'prototype',
+  garden: 'prototype',
+  monsterFoodTraits: 'prototype',
+  inventory: 'prototype',
+  saveLoad: 'prototype',
+  dayNight: 'prototype',
+  safeZone: 'prototype',
+  kingdoms: 'framework',
+  regionSpawns: 'framework',
+  quests: 'framework',
+  shop: 'framework',
+  crafting: 'framework',
+  equipment: 'framework',
+  dungeons: 'framework',
+  advancedCombat: 'framework',
+  plantEvolution: 'framework',
+  townNpc: 'prototype',
+  realAssets: 'pending',
+  finalIntegration: 'pending',
+});
