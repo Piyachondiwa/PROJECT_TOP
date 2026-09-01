@@ -11,8 +11,25 @@ canvas { display: block; width: 100%; height: 100%; background: #202b2a; image-r
 .fill { height: 100%; width: 100%; transition: width .12s linear; }
 .fill.hp { background: #b85c5c; }
 .fill.mp { background: #5d80b7; }
-.stat-line { display: flex; justify-content: space-between; margin-top: 7px; font-size: 12px; }
+.stat-line { display: flex; justify-content: space-between; gap: 16px; margin-top: 7px; font-size: 12px; }
 .controls { top: auto; left: 50%; bottom: 12px; transform: translateX(-50%); min-width: auto; white-space: nowrap; font-size: 11px; color: #d4d7d5; }
 #message { position: absolute; left: 50%; top: 82px; transform: translateX(-50%); padding: 7px 12px; background: rgba(10, 12, 14, .75); border: 1px solid #555c59; font-size: 12px; opacity: 0; transition: opacity .15s; pointer-events: none; }
 #message.show { opacity: 1; }
-@media (max-width: 650px) { .hud-box { transform: scale(.8); transform-origin: top left; } .controls { display: none; } }
+.panel { position: absolute; inset: 54px 110px 54px 110px; z-index: 10; padding: 18px; background: rgba(13,16,20,.96); border: 2px solid #72766f; box-shadow: 8px 8px 0 rgba(0,0,0,.4); overflow: auto; }
+.panel.hidden { display: none; }
+.panel-title { font-size: 22px; letter-spacing: 3px; margin-bottom: 14px; }
+#inventory-content { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.inventory-section { min-height: 120px; padding: 10px; background: rgba(40,43,43,.6); border: 1px solid #505753; }
+.inventory-section h3 { margin: 0 0 8px; font-size: 13px; color: #d7d1bd; }
+.item-row { width: 100%; display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 7px; margin: 4px 0; color: #e8e4d6; background: #23282a; border: 1px solid #404747; font: inherit; text-align: left; }
+button.item-row { cursor: pointer; }
+button.item-row:hover, button.item-row.selected { background: #303a3a; border-color: #8b9188; }
+.trait-card { display: grid; gap: 4px; padding: 7px; margin: 4px 0; background: #23282a; border: 1px solid #404747; }
+.trait-card span, .empty, .panel-help { color: #a8aea9; font-size: 11px; }
+.panel-help { margin-top: 14px; }
+@media (max-width: 760px) {
+  .hud-box { transform: scale(.8); transform-origin: top left; }
+  .controls { display: none; }
+  .panel { inset: 20px; padding: 12px; }
+  #inventory-content { grid-template-columns: 1fr; }
+}
