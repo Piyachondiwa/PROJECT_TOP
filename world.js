@@ -1,4 +1,4 @@
-// World systems: safe areas, sleep, and persistent game clock helpers.
+// World systems: safe areas, sleep, and persistent game-clock helpers.
 
 const SAFE_ZONES = Object.freeze([
   { id: 'starter-camp', name: 'Starter Camp', x: 330, y: 220, w: 310, h: 250 },
@@ -26,13 +26,6 @@ function restAtSafeZone() {
   worldTime = 6;
   showMessage(`Rested at ${zone.name}. Morning has come.`);
   return true;
-}
-
-function formatWorldTime(time) {
-  const normalized = ((time % 24) + 24) % 24;
-  const hours = Math.floor(normalized);
-  const minutes = Math.floor((normalized - hours) * 60);
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
 }
 
 function isNightTime() {
