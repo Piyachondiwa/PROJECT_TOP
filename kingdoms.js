@@ -1,11 +1,4 @@
-const KINGDOMS = Object.freeze([
-  { id:'eldoria', name:'Eldoria', subtitle:'Kingdom of Dawn', element:'light', color:'#8f8060' },
-  { id:'veylthorn', name:'Veylthorn', subtitle:'Cursed Verdant Realm', element:'nature', color:'#405945' },
-  { id:'dravaryn', name:'Dravaryn', subtitle:'Kingdom of Ash', element:'fire', color:'#704236' },
-  { id:'nythrheim', name:'Nythrheim', subtitle:'Kingdom of Night', element:'shadow', color:'#34334c' },
-  { id:'aureval', name:'Aureval', subtitle:'Frozen Crown', element:'ice', color:'#596f78' },
-]);
-
+// Region and progression data. Kingdom definitions live in data.js.
 const REGION_DEFINITIONS = Object.freeze({
   eldoria_fields:{ id:'eldoria_fields', kingdomId:'eldoria', name:'Dawn Fields', levelMin:1, levelMax:6 },
   veylthorn_forest:{ id:'veylthorn_forest', kingdomId:'veylthorn', name:'Whispering Forest', levelMin:4, levelMax:10 },
@@ -30,6 +23,6 @@ function travelToRegion(id){
   const region=REGION_DEFINITIONS[id];
   if(!region || !isRegionUnlocked(id)) return false;
   worldProgress.currentRegionId=id;
-  showMessage(`Travelled to ${region.name}.`);
+  if(typeof showMessage === 'function') showMessage(`Travelled to ${region.name}.`);
   return true;
 }
